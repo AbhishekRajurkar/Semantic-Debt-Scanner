@@ -1,0 +1,17 @@
+[project]
+name = "ollama-map-reduce"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "langchain-community>=0.4.1",
+    "langchain-google-genai>=4.2.2",
+    "langchain-ollama>=1.1.0",
+    "langchain-openai>=1.1.14",
+    "langgraph>=1.1.6",
+    "langsmith>=0.7.32",
+    "mlx-lm>=0.31.2",
+    "pydantic>=2.13.1",
+    "python-dotenv>=1.2.2",
+]
