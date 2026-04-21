@@ -36,6 +36,29 @@ structured_llm = local_llm.with_structured_output(FileFindings)
 cloud_llm = ChatGoogleGenerativeAI(model="gemini-3-flash-preview", temperature=0.2)
 
 
+def load_mlx_model(model_path: str):
+    """Load an MLX model/tokenizer with consistent error handling."""
+    try:
+        print(f"📡 Attempting to load model: {model_path}...")
+        # Loading might take time if downloading or converting weights
+        model, tokenizer = load(model_path)
+        print("✅ Model loaded successfully on Apple Silicon GPU.")
+        return model, tokenizer
+
+    except MemoryError:
+        print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
+        sys.exit(1)
+
+    except ConnectionError:
+        print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
+        sys.exit(1)
+
+    except Exception as e:
+        print(f"❌ An unexpected error occurred while loading the model: {e}")
+        # This catches things like 'Model not found' or 'Corrupted files'
+        sys.exit(1)
+
+
 def pop_file_node(state: GraphState):
     """Pops the next file; routes to Gemini if queue is empty."""
     queue = state.get("file_queue", [])
@@ -58,25 +81,7 @@ def semantic_router_node(state: GraphState):
     
     # 2. Use the 1B 'Pico' model
     model_path = "mlx-community/Llama-3.2-1B-Instruct-4bit"
-
-    try:
-        print(f"📡 Attempting to load model: {model_path}...")
-        # Loading might take time if downloading or converting weights
-        model, tokenizer = load(model_path)
-        print("✅ Model loaded successfully on Apple Silicon GPU.")
-    
-    except MemoryError:
-        print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
-        sys.exit(1)
-
-    except ConnectionError:
-        print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
-        sys.exit(1)
-
-    except Exception as e:
-        print(f"❌ An unexpected error occurred while loading the model: {e}")
-        # This catches things like 'Model not found' or 'Corrupted files'
-        sys.exit(1)
+    model, tokenizer = load_mlx_model(model_path)
 
     messages = [
         {
@@ -209,25 +214,7 @@ def reflection_node(state: GraphState):
     print("🧠 Reflection Node: Loading Llama-3.2-3B...")
     
     model_path = "mlx-community/Llama-3.2-3B-Instruct-4bit"
-
-    try:
-        print(f"📡 Attempting to load model: {model_path}...")
-        # Loading might take time if downloading or converting weights
-        model, tokenizer = load(model_path)
-        print("✅ Model loaded successfully on Apple Silicon GPU.")
-
-    except MemoryError:
-        print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
-        sys.exit(1)
-
-    except ConnectionError:
-        print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
-        sys.exit(1)
-
-    except Exception as e:
-        print(f"❌ An unexpected error occurred while loading the model: {e}")
-        # This catches things like 'Model not found' or 'Corrupted files'
-        sys.exit(1)
+    model, tokenizer = load_mlx_model(model_path)
 
     # 1. Structure as a strict Chat Template (CRITICAL for Llama 3)
     messages = [

@@ -16,12 +16,7 @@ def route_from_router(state: GraphState):
     if decision == "analyze":
         return "analyze" # This string must match the key in the mapping below
     return "skip"
-    # if state.get("router_decision") == "analyze":
-    #     return "local_critique_node"
-    
-    # # If skip, we go back to pop_file_node to get the next file
-    # print(f"⏩ Skipping {state['current_file']} (Semantic Router marked as low priority)")
-    # return "pop_file_node"
+
 
 def build_graph():
     builder = StateGraph(GraphState)
