@@ -1,12 +1,11 @@
-import os
 import json
 import re
 #from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from src.state import GraphState, FileFindings
-from langchain_core.utils.json import parse_json_markdown
 import gc
+import sys
 import mlx.core as mx
 from mlx_lm import load, generate
 
@@ -52,7 +51,7 @@ def semantic_router_node(state: GraphState):
     file_path = state["current_file"]
     
     # 1. Peek at the file (First 100 characters)
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         content_peek = f.read(100)
 
     print(f"🔍 Routing: {file_path}")
@@ -60,33 +59,33 @@ def semantic_router_node(state: GraphState):
     # 2. Use the 1B 'Pico' model
     model_path = "mlx-community/Llama-3.2-1B-Instruct-4bit"
 
-try:
-    print(f"📡 Attempting to load model: {model_path}...")
-    # Loading might take time if downloading or converting weights
-    model, tokenizer = load(model_path)
-    print("✅ Model loaded successfully on Apple Silicon GPU.")
-
-except MemoryError:
-    print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
-    sys.exit(1)
-
-except ConnectionError:
-    print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
-    sys.exit(1)
-
-except Exception as e:
-    print(f"❌ An unexpected error occurred while loading the model: {e}")
-    # This catches things like 'Model not found' or 'Corrupted files'
-    sys.exit(1)
+    try:
+        print(f"📡 Attempting to load model: {model_path}...")
+        # Loading might take time if downloading or converting weights
+        model, tokenizer = load(model_path)
+        print("✅ Model loaded successfully on Apple Silicon GPU.")
     
+    except MemoryError:
+        print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
+        sys.exit(1)
+
+    except ConnectionError:
+        print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
+        sys.exit(1)
+
+    except Exception as e:
+        print(f"❌ An unexpected error occurred while loading the model: {e}")
+        # This catches things like 'Model not found' or 'Corrupted files'
+        sys.exit(1)
+
     messages = [
-    {
-        "role": "system", 
-        "content": "You are a code filter. Your goal is to find files with logic. Output ONLY 'ANALYZE' or 'SKIP'."
-    },
-    {
-        "role": "user", 
-        "content": """
+        {
+            "role": "system",
+            "content": "You are a code filter. Your goal is to find files with logic. Output ONLY 'ANALYZE' or 'SKIP'."
+        },
+        {
+            "role": "user",
+            "content": f"""
         Classify these examples:
         1. 'import os\nAPI_KEY = "123"' -> SKIP
         2. 'def process_order(data):\n  if data.valid:...' -> ANALYZE
@@ -99,8 +98,8 @@ except Exception as e:
         If it contains ANY functions (def) or classes (class), you MUST output 'ANALYZE'. 
         When in doubt, output 'ANALYZE'.
         """
-    }
-]
+        }
+    ]
     prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
 
     try:
@@ -126,7 +125,7 @@ def local_critique_node(state: GraphState):
     """Local SLM reads the file, redacts IP, and flags flaws."""
     file_path = state["current_file"]
     
-    with open(file_path, "r") as f:
+    with open(file_path, "r", encoding="utf-8") as f:
         code_content = f.read()
 
     prompt = f"""[INST] <<SYS>>
@@ -186,7 +185,7 @@ def local_critique_node(state: GraphState):
         flaws_as_dicts = [flaw.model_dump() for flaw in structured_response.flaws]
     except Exception as e:
         print(f"⚠️ Parsing failed. Error: {e}")
-        print(f"⚠️ Raw output was: {content}")
+        print("⚠️ Raw output omitted to reduce data exposure in logs.")
         
         # 2. THE REDUCER FIX
         # If it fails, pass the raw text as a finding so Gemini still sees it, 
@@ -211,24 +210,24 @@ def reflection_node(state: GraphState):
     
     model_path = "mlx-community/Llama-3.2-3B-Instruct-4bit"
 
-try:
-    print(f"📡 Attempting to load model: {model_path}...")
-    # Loading might take time if downloading or converting weights
-    model, tokenizer = load(model_path)
-    print("✅ Model loaded successfully on Apple Silicon GPU.")
+    try:
+        print(f"📡 Attempting to load model: {model_path}...")
+        # Loading might take time if downloading or converting weights
+        model, tokenizer = load(model_path)
+        print("✅ Model loaded successfully on Apple Silicon GPU.")
 
-except MemoryError:
-    print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
-    sys.exit(1)
+    except MemoryError:
+        print("❌ Error: Out of Memory. Close other apps (like Chrome or Docker) and try again.")
+        sys.exit(1)
 
-except ConnectionError:
-    print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
-    sys.exit(1)
+    except ConnectionError:
+        print("❌ Error: Could not connect to Hugging Face. Check your internet connection.")
+        sys.exit(1)
 
-except Exception as e:
-    print(f"❌ An unexpected error occurred while loading the model: {e}")
-    # This catches things like 'Model not found' or 'Corrupted files'
-    sys.exit(1)
+    except Exception as e:
+        print(f"❌ An unexpected error occurred while loading the model: {e}")
+        # This catches things like 'Model not found' or 'Corrupted files'
+        sys.exit(1)
 
     # 1. Structure as a strict Chat Template (CRITICAL for Llama 3)
     messages = [
